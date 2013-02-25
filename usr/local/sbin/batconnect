@@ -1,0 +1,84 @@
+#!/bin/sh
+
+# batconnect zipit 2412 192.168.11.235  <--- static IP channel 1
+# OR
+# batconnect zipit 2412 dhcp 192.168.5.1 <--- dhcp channel 1 with default gateway of 192.168.5.1 
+# OR
+# batconnect zipit  <-- defaults to dhcp and channel 1 with gateway 192.168.11.1
+
+wifidevice=wlan0
+
+SSID=$1
+if [ "$SSID" == "" ]; then
+	echo -e "\nSSID not specified"
+	echo "Exiting..."
+
+	exit 1	
+fi
+
+freq=$2
+if [ "$freq" == "" ]; then
+	freq=2412
+fi
+
+dhcp=0
+if [ "$3" == "dhcp" ]; then
+	dhcp=1
+fi
+
+if [ "$3" == "" ]; then
+	dhcp=1
+fi
+
+gateway=$4
+if [ "$gateway" == "" ]; then
+	gateway=192.168.11.1
+fi
+
+echo -ne "\nPreparing devices.... \n"
+rmmod batman-adv 2>/dev/null
+killall wpa_supplicant 2>/dev/null
+ifconfig $wifidevice 0.0.0.0 2>/dev/null
+ifconfig $wifidevice down 2>/dev/null
+ifdown -a
+
+echo -ne "\nSetting up interface bat0 \n"
+
+
+insmod batman-adv 2>/dev/null
+ifconfig $wifidevice mtu 1476 2>/dev/null
+
+ifconfig $wifidevice up 2>/dev/null
+iw $wifidevice set type ibss
+
+iw $wifidevice ibss join $SSID $freq
+
+batctl if add $wifidevice
+
+if [ $dhcp -eq 1 ]; then
+
+	route add default gw $gateway
+	
+	udhcpc -i "$wifidevice" -q -n
+	if [ $? -ne 0 ]; then
+		echo -e "\nUnable to obtain ip address"
+		echo "Exiting..."
+
+		ifconfig $wifidevice down 2>/dev/null
+		ifdown -a
+
+		exit 1		
+	fi
+	
+else
+	ifconfig bat0 $3
+fi
+
+#ifconfig bat0 192.168.11.225
+ifconfig bat0 up 2>/dev/null
+
+#add route for picking up multicast streams
+route add -net 224.0.0.0 netmask 240.0.0.0 dev bat0
+
+echo -ne "\nConnected to $SSID \n"
+exit 0

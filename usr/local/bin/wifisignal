@@ -1,0 +1,6 @@
+#!/bin/sh
+
+device="wlan0"
+
+iwconfig "$device" | sed 's/ /\n/g' |grep Quality|sed 's/Quality=//g'|sed 's/\/70//g'
+

@@ -1,0 +1,47 @@
+#!/bin/sh
+#uovmount
+
+#unmount usb drives
+#umount /mnt/sd* 
+#rmdir /mnt/sd*
+
+kill -USR2 `pidof bldaemon`
+
+###### Pre-suspend ######
+wpaconf="/etc/wpa.conf"
+wifidevice=wlan0
+
+
+pidof wpa_supplicant
+wpa_stat=$?
+
+if [ $wpa_stat -eq 0 ]; then
+	killall wpa_supplicant
+fi
+
+ifconfig "$wifidevice" down 2>/dev/null
+rmmod libertas_spi 2>/dev/null
+
+##### Suspend #######
+echo "mem" > /sys/power/state
+
+###### Resume ######
+#echo host >/sys/devices/platform/z2-usb-switch/usb_mode
+#ovmount
+killall ebind
+insmod libertas_spi 2>/dev/null
+
+#just in case there wass a problem restart 
+
+# Check if wpa_supplicant is running -- if true the assumption is that wifi was on
+
+if [ $wpa_stat -eq 0 ]; then
+
+	/usr/local/sbin/wpa-connect $wifidevice $wpaconf
+
+fi
+
+
+
+#enable usb host
+#echo host >/sys/devices/platform/z2-usb-switch/usb_mode

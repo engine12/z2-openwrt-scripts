@@ -1,0 +1,103 @@
+#!/bin/sh
+##########################################################################################################################
+# ewoc-cli.sh v0.02 (15/01/2011) aka Easy Wifi Configurator -- EWoC                                                      #
+# By Russell K. Davis with input from jaldher, g8787/geordy, Ray Dios Haque, pcurtis, wicknix, brianith and lfod et al.  #
+# This version is tailored for use on debian based distros, it definatly won't work on IZ2S/IZ2Se/EZ2S but it might work #
+# on other distros.                                                                                                      #
+##########################################################################################################################
+
+# Make sure we have all the required programs
+which wpa_supplicant &>/dev/null
+if [ $? -eq 1 ]; then
+	requires="Please install wpa-supplicant"
+fi
+
+which udhcpc &>/dev/null
+if [ $? -eq 1 ]; then
+        requires="$requires\nPlease install udhcpc"
+fi
+if [ -n "$requires" ]; then
+	echo -e "$requires"
+	exit 1
+fi
+
+# wpa_supplicant config file to use
+wpaconf="/etc/wpa.conf"
+
+# Read the desired wifi device from the command line, else use the default.
+wifidevice=$1
+if [ "$wifidevice" == "" ]; then
+	wifidevice=wlan0
+fi
+
+echo -e "\nTrying to connect with existing settings....\n"
+wpa-connect $wifidevice $wpaconf 2>/dev/null
+if [ $? -eq 0 ]; then
+	echo -e "\nConnected"
+	exit 0		
+fi
+
+
+ifconfig "$wifidevice" up 2>/dev/null
+iwlist $wifidevice scan | grep 'ESSID' | sed -e 's/.*ESSID:"\([^"]\+\)".*/  \1/' > /tmp/ap-list.tmp
+
+echo -e "\nChoose access point:"
+i=1
+while read ap; do
+	echo "$i) $ap"
+	let i+=1
+done </tmp/ap-list.tmp
+echo -e "$i) Manual/named SSID\nq) Quit"
+read -p "#? " APCHOICE
+if [ "$APCHOICE" == "q" ] || [ "$APCOICE" == "Q" ]; then
+	echo "Exiting..."
+	exit 0
+fi
+if [ $APCHOICE -eq $i ]; then
+	read -p "New Manual/Named SSID: " SSID
+else
+	i=1
+	while read ap; do
+		if [ $i -eq $APCHOICE ]; then
+			SSID=$ap
+			break
+		fi
+		let i+=1
+	done </tmp/ap-list.tmp	
+fi
+grep "$SSID" "$wpaconf" &>/dev/null
+if [ $? -ne 0 ]; then
+	echo -e "\nChoose cipher method:\n1) WPA/WPA2\n2) WEP(Hex)\n3) WEP(Ascii)\n4) None\nq) Quit"
+	read -p "#? " CIPHER
+	case $CIPHER in
+		"1")
+			read -p "Enter Passphrase (WPA/WPA2): " passphrase
+			echo -e "\nnetwork={\n\tssid=\"$SSID\"\n\tkey_mgmt=WPA-PSK\n\tpsk=\"$passphrase\"\n}" >> "$wpaconf"
+			;;
+		"2")
+			read -p "Enter Hex WEP Key: " passphrase
+			echo -e "\nnetwork={\n\tssid=\"$SSID\"\n\tkey_mgmt=NONE\n\twep_key0=\"$passphrase\"\n}" >> "$wpaconf"
+			;;
+		"3")
+			read -p "Enter ASCII WEP Key: " passphrase
+			echo -e "\nnetwork={\n\tssid=\"$SSID\"\n\tkey_mgmt=NONE\n\twep_key0=\"$passphrase\"\n}" >> "$wpaconf"
+			;;
+		"4")
+			echo -e "\nnetwork={\n\tssid=\"$NEWSSID\"\n\tkey_mgmt=NONE\n}" >> "$wpaconf"
+			;;
+		*)
+			echo "Exiting..."
+			exit 0
+			;;
+	esac
+else
+	echo -e "$SSID already exists in $wpaconf\nYou must manually remove it before adding it again\nExiting..."
+	echo
+	read -n 1 -p "....press any key to continue"
+
+	exit 1
+fi
+
+
+wpa-connect $wifidevice $wpaconf
+

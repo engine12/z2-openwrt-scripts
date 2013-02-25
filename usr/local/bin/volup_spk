@@ -1,0 +1,12 @@
+#!/bin/sh
+# increase the volume
+
+# how much in %
+PERCENT=1
+# which volume?
+#CONTROL=PCM
+CONTROL=Speaker
+#CONTROL=Headphone
+
+amixer set $CONTROL $PERCENT%+ >/dev/null
+

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+#echo $1
+
+mkfifo /tmp/mp3_out 2>/dev/null
+
+wget -U mpg123 -O- $1 >/tmp/mp3_out
+
+#echo "load /tmp/mp3_in" >/tmp/mpg123
+

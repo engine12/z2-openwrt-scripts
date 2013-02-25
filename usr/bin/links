@@ -1,0 +1,24 @@
+#!/bin/sh
+
+app=links
+
+clear
+
+pid=`cat /tmp/apps/$app` 2>/dev/null
+
+if [ ! $pid ]; then
+
+	openvt -s launch $app "echo starting Links..." "links.bin $1 $2" 1 1
+
+	sleep 2  
+	clear >/dev/tty`cat /tmp/vt/$app`
+	pid=`cat /tmp/apps/$app`
+
+	findGraphTTY $pid "$app"
+else
+	vt=`cat /tmp/vt/$app` 2>/dev/null
+	if [ -n "$vt" ]; then	
+		chvt $vt
+	fi
+fi
+

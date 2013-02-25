@@ -1,0 +1,22 @@
+#!/bin/sh
+deallocvt
+currVT=`fgconsole`
+
+vt=$(($currVT-1))
+if [ $vt -eq 0 ]; then
+    cd /tmp/vt
+    for item in *
+    do
+        local tty=`cat $item`
+        if [ $tty -gt $vt ]; then
+            vt=$tty
+        fi
+    done
+fi
+
+if [ $vt -eq 0 ]; then
+    onHome 
+else
+    chvt $vt
+fi
+

@@ -1,0 +1,29 @@
+#!/bin/sh
+
+if [ ! $1 ]; then
+  exit
+fi
+
+
+#this script will allow an app ~10 seconds to shut down gracefully
+#after the ten secs are up the process will be force closed
+kill $1 2>/dev/null
+#echo "stopApp called"
+
+for i in 1 2 3 4 5 6 7 8 9 10; do
+
+	var=`ls /proc/$1 2>/dev/null`
+
+	if [ -n "$var" ]; then
+#    	echo "waiting for $1"
+		sleep 2 
+	else
+#		echo "$1 closed gracefully"
+		exit
+	fi
+
+done
+
+#echo "forced to close"
+kill -9 $1 2>/dev/null
+

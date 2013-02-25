@@ -1,0 +1,22 @@
+#!/bin/sh
+
+#clear
+killall wgetMP3 2>/dev/null
+
+trap '' TERM INT
+#echo $1
+
+mkfifo /tmp/mp3_out 2>/dev/null
+
+#dd if=/dev/null of=/tmp/mp3_out
+#dd if=/dev/null of=/tmp/mp3_in
+
+#cat "$1" | tee /tmp/mp3_out >/tmp/mp3_in
+
+cat "$1" >/tmp/mp3_out
+
+#echo "load /tmp/mp3_in" >/tmp/mpg123
+
+#if we make it here then notify blkMp3Player that the track is over
+pid=`cat /tmp/apps/blkmp3` 2>/dev/null
+kill -s USR1 $pid 2>/dev/null

@@ -1,0 +1,32 @@
+#!/bin/sh
+## assume the largest number is the graphical tty
+findTTY(){
+
+	local max_tty=0
+
+	if [ ! -d /proc/$1/fd ]; then
+		exit 1
+	fi
+
+	cd /proc/$1/fd
+	while [ $max_tty -eq 0 ]; do
+		for item in *; do
+			if [ $(($item)) -gt 2 ]; then
+				local tty=`readlink $item |grep '/dev/tty'|grep -Eo -e "[0-9]|[0-9][0-9]" `
+				if [ $tty ] && [ $tty -gt $max_tty ]; then
+					max_tty=$tty
+				fi
+			fi
+		done
+
+	done
+
+	echo $max_tty >/tmp/vt/$2
+}
+
+findTTY $1 $2 & pid=$!
+
+timeout=10
+( sleep $timeout && kill -HUP $pid ) 2>/dev/null & watcher=$!
+wait $pid 2>/dev/null && pkill -HUP -P $watcher
+

@@ -1,0 +1,8 @@
+#!/bin/sh
+while :
+    do
+	/usr/local/sbin/ebindkeys -d -f /etc/ebindPowerBtn >/dev/null 2>&1
+
+done
+
+

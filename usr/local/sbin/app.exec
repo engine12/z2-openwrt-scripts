@@ -1,0 +1,5 @@
+#!/bin/sh
+#store the pid
+echo $$ >/tmp/apps/$1
+#let the app take over this process
+exec $2

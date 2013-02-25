@@ -1,0 +1,8 @@
+#!/bin/sh
+while :
+    do
+	/usr/local/sbin/ebindkeys -d -f /etc/ebindkeysrc >/dev/null 2>&1
+	clear
+done
+
+

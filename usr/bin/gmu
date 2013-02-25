@@ -1,0 +1,14 @@
+#!/bin/sh
+
+#just in case mplayer or mpg123 is running
+/usr/local/sbin/onStop
+
+cd /usr/share/gmu
+/usr/bin/gmu.bin -e -d ~/.config/gmu -c gmu.zipit-z2.conf 2>/dev/null &
+gmu_pid=$!
+trap 'kill $gmu_pid; rm /tmp/run/gmu.pid' TERM
+echo $gmu_pid >/tmp/run/gmu.pid
+
+wait $gmu_pid
+rm /tmp/run/gmu.pid
+

@@ -1,0 +1,11 @@
+#!/bin/sh
+
+killall mpg123 2>/dev/null
+killall mplayer 2>/dev/null
+killall movgrab 2>/dev/null
+killall youtube.sh 2>/dev/null
+killall onPlay 2>/dev/null
+
+rm /tmp/mpg123 2>/dev/null
+
+deallocvt

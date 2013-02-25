@@ -1,0 +1,34 @@
+#!/bin/sh
+#start at the end of the playlist  -->   sed '1!G;h;$!d'
+app=blkmp3
+
+clear
+pid=`cat /tmp/apps/$app` 2>/dev/null
+
+if [ ! $pid ]; then
+
+#	rm /tmp/vt/gmenu2x 2>/dev/null
+	openvt -s launch $app 'echo' 'blkMp3Player' 1
+
+else
+	chvt `cat /tmp/vt/$app`
+fi
+
+/usr/bin/mpg123.sh
+if [ $? -eq 1 ]; then
+#pause and let /tmp/apps/$app fill
+#or the pid will be empty lower down	
+	sleep 1
+else
+	chvt `cat /tmp/vt/$app`
+fi
+
+
+pid=`cat /tmp/apps/$app` 2>/dev/null
+#register for callbacks
+echo "NOTIFY ${pid}" >/tmp/mpg123
+echo "seq 1.3 1.4 1.7" >/tmp/mpg123
+echo "silence" >/tmp/mpg123
+
+
+

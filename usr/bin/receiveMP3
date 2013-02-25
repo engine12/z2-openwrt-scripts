@@ -1,0 +1,15 @@
+#!/bin/sh
+
+clear
+mkfifo /tmp/mp3_in 2>/dev/null
+echo "load /tmp/mp3_in" >/tmp/mpg123
+
+pid=`pidof testMP3Receiver` 2>/dev/null
+
+if [ ! $pid ]; then
+  echo "start receive"
+  testMP3Receiver >/tmp/mp3_in
+else
+  echo "already receiving"
+fi
+

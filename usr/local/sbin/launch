@@ -1,0 +1,39 @@
+#!/bin/sh
+
+trap 'rm /tmp/vt/$1; rm /tmp/apps/$1 2>/dev/null' TERM INT
+
+vt=`fgconsole`
+echo $vt >/tmp/vt/$1
+$2
+app.exec $1 "$3"
+
+stat=$?
+
+rm /tmp/apps/$1 2>/dev/null
+rm /tmp/vt/$1 2>/dev/null
+
+#if there is a final argument then return 
+#to gmenu2x after the app is closed
+#Note: this will close an app that was started by gmenu2x
+#		but not placed into a new vt (i.e. the 'old way')
+# Example:  links and nano are both running...
+#links was started with this script and was thus started 
+#on it's own terminal with gmenu2x still running
+#Nano was then started from gmenu2x, but was launched 
+#the 'old way' and thus replaces the gmenu2x 
+#process (gmenu2x is no longer running)
+#if the user now switches to Links and closes it, 
+#the onHome handler will be called
+#this will lead to nano being closed and then gmenu2x starting
+#(changes will not saved...  you will not be prompted to do so) 
+if [ $stat -ne 0 ] && [ -n "$5" ]; then
+
+#the app didn't end well. This is here for 
+#catching links and getting the SDL lib back on track
+	onAltHome
+	exit 1
+
+elif [ -n "$4" ]; then
+    onHome
+fi
+

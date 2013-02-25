@@ -1,0 +1,18 @@
+#!/bin/sh
+app=mp3Streamer
+#  this script allows only one instance 
+#  to be started by gmenu2x
+
+clear
+pid=`pidof testMP3Streamer` 2>/dev/null
+
+if [ ! $pid ]; then
+  echo "starting server"
+  mkfifo /tmp/mp3_out 2>/dev/null
+
+  openvt launch $app 'echo' "testMP3Streamer /tmp/mp3_out" 
+
+else
+  echo "server is running"
+fi
+

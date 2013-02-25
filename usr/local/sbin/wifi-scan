@@ -1,0 +1,5 @@
+#!/bin/sh
+
+ifconfig "$1" up 2>/dev/null
+iwlist $1 scan | grep 'ESSID' | sed -e 's/.*ESSID:"\([^"]\+\)".*/  \1/'
+

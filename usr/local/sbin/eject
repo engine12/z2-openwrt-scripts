@@ -1,0 +1,69 @@
+#!/bin/sh
+chvt 1
+echo;echo
+echo "Eject has started..."
+
+sync
+#unmount the overlayfs
+uovmount
+# if uovmount failed, exit
+if [ $? -ne 0 ]; then
+	rmdir /mnt/*
+	read -p "Press enter to exit"
+	exit 1
+fi
+
+#remove empty directories, they can prevent hotplug from mounting
+rmdir /mnt/*
+
+# Check if any processes are using the mount devices
+PIDUSINGFS=
+for mount in /mnt/*; do
+	if [ `stat -fc%t:%T "${mount}"` != `stat -fc%t:%T "${mount}/.."` ]; then
+#		echo "$dir is mounted"
+
+		USINGDIR=`fuser -m ${mount}`
+		if [ $? -eq 0 ]; then
+			for pid in ${USINGDIR}; do
+				if [ -z "$TEXTUSINGFS" ]; then
+					TEXTUSINGFS="`ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
+				else
+					TEXTUSINGFS="$TEXTUSINGFS, `ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
+				fi
+			done
+			PIDUSINGFS="$PIDUSINGFS $USINGDIR"
+		fi
+	fi
+done
+if [ -n "$PIDUSINGFS" ]; then
+	echo "The following programs are using mount points:"
+	echo "$TEXTUSINGFS"
+	read -p "Ok to kill these programs? (Y/n): " CHOICE
+	if [ "$CHOICE" == "N" ] || [ "$CHOICE" == "n" ]; then
+		echo "Mount points STILL mounted, exiting..."
+		sleep 4
+		exit 1
+	else
+		echo "Killing all programs using the mount points..."
+		kill -9 ${PIDUSINGFS}
+		if [ $? -ne 0 ]; then
+			echo "Problem killing programs, exiting..."
+			sleep 4
+			exit 1
+		fi
+	fi
+fi
+
+# Unmount SD Cards
+echo "Attempting to unmount mount points..."
+for mount in /mnt/*; do
+	echo "Unmounting $mount"
+	umount -l ${mount} &>/dev/null
+	if [ $? -eq 0 ]; then
+		rmdir ${mount}
+	fi
+done
+
+echo "Finished. Press enter to continue"
+read
+

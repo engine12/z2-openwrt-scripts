@@ -1,0 +1,8 @@
+#!/bin/sh
+
+killall -9 onHome
+killall -9 links.bin
+killall gmenu2x.bin
+sleep 1
+onHome &
+killall ebind

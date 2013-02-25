@@ -1,0 +1,59 @@
+#!/bin/sh
+
+#ifdown loopback
+#ifup loopback
+url=`sed '1!G;h;$!d' ${1} | grep -e ':80[0-9][0-9]/' | head -n 1 | cut -f 2 -d =`
+
+if [ -z "$url" ]; then
+	url=`sed '1!G;h;$!d' ${1} | grep -e ':80[0-9][0-9]\b' | head -n 1 | cut -f 2 -d =`
+fi
+if [ -z "$url" ]; then
+	url=`sed '1!G;h;$!d' ${1} | grep -e ':80/' | head -n 1 | cut -f 2 -d =`
+fi
+
+if [ -z "$url" ]; then
+	url=`sed '1!G;h;$!d' ${1} | grep -e ':80\b' | head -n 1 | cut -f 2 -d =`
+fi
+
+if [ -z "$url" ]; then
+	url=`sed '1!G;h;$!d' ${1} | grep -e ':8000/' | head -n 1 | cut -f 2 -d =`
+fi
+
+if [ -z "$url" ]; then
+	url=`sed '1!G;h;$!d' ${1} | grep -e ':8000\b' | head -n 1 | cut -f 2 -d =`
+fi
+
+
+# hmmm maybe there isn't a port specified? i.e. somafm style pls for firewall proxy
+if [ -z "$url" ]; then
+    url=`sed '1!G;h;$!d' ${1} | grep -e 'File' | head -n 1 | cut -f 2 -d =`
+    ##check for a port designation
+    if [ -n "$url" ]; then
+        port=`echo $url|grep -e ':[0-9]'`
+        if [ -n "$port" ]; then
+			echo "$url"
+            url=""
+        fi  
+    fi
+fi
+
+
+
+
+if [ -z "$url" ]; then
+	out=/dev/tty`fgconsole`
+	clear >$out
+	echo "Desired Port could not be found.    " >$out
+	echo `sed '1!G;h;$!d' ${1} | grep -e 'File' | head -n 1 | cut -f 2 -d =` >$out
+	echo "   edit plsToURL for tuning the port filter" >$out
+	echo >$out
+
+	echo "...press any key to continue" >$out
+	read -n 1 <$out
+	clear >$out
+	exit 1
+else
+	echo "$url"
+fi
+
+

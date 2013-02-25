@@ -1,0 +1,5 @@
+if [ -p "/tmp/mpg123" ]; then
+	#the file is a pipe  
+	echo "pause" >/tmp/mpg123
+fi
+
