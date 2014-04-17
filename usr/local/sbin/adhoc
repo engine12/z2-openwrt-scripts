@@ -6,6 +6,8 @@
 # OR
 # adhoc white  <-- defaults to dhcp and channel 6 with gateway 192.168.5.1
 
+set -x
+
 get_wifidev()
 {
 	set -- $( tail -n1 '/proc/net/wireless' )
@@ -13,33 +15,34 @@ get_wifidev()
 }
 
 wifidevice="$( get_wifidev )"
+BSSID='02:ca:ff:ee:ba:be'		# hardcoded IBSS-cell-ID / freifunk-default
 
 SSID="$1"
-if [ "$SSID" == "" ]; then
+[ -z "$SSID" ] && {
 	echo -e "\nSSID not specified"
 	echo "Exiting..."
 
 	exit 1	
-fi
+}
 
 freq="$2"
-if [ "$freq" == "" ]; then
+[ -z "$freq" ] && {
 	freq=2437
-fi
+}
 
 dhcp=0
-if [ "$3" == "dhcp" ]; then
+[ "$3" = 'dhcp' ] && {
 	dhcp=1
-fi
+}
 
-if [ "$3" == "" ]; then
+[ -z "$3" ] && {
 	dhcp=1
-fi
+}
 
 gateway="$4"
-if [ "$gateway" == "" ]; then
+[ -z "$gateway" ] && {
 	gateway=192.168.5.1
-fi
+}
 
 echo -ne "\nPreparing devices.... \n" 
 rmmod batman-adv 2>/dev/null
@@ -49,13 +52,13 @@ ifconfig "bat0" 0.0.0.0 2>/dev/null
 ifdown -a
 
 
-echo -ne "\nSetting up interface $wifidevice \n"
+echo -ne "\nSetting up interface '$wifidevice' \n"
 
 
 ifconfig "$wifidevice" up 2>/dev/null
 iw "$wifidevice" set type ibss
 iw "$wifidevice" ibss join "$SSID" "$freq"
-
+iwconfig "$wifidevice" ap "$BSSID"
 
 if [ "$dhcp" -eq 1 ]; then
 
