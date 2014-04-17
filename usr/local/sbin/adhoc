@@ -33,12 +33,69 @@ freq="$2"
 }
 
 dhcp=0
-[ "$3" = 'dhcp' ] && {
+if [ "$3" = 'dhcp' ]; then
 	dhcp=1
-}
+else
+	IP="$3"
+fi
 
 [ -z "$3" ] && {
 	dhcp=1
+}
+
+[ -e '/etc/config/olsrd' ] && {
+	# normal olsrd-startup file will not work,
+	# because some components on zipit-distro are too old
+	DAEMON='olsr'
+	read HOSTNAME <'/proc/sys/kernel/hostname'
+
+	cat >'/etc/olsrd.conf' <<EOF
+DebugLevel 0
+AllowNoInt yes
+MainIp $IP
+ClearScreen no
+IpVersion 4
+FIBMetric "flat"
+Willingness 7
+TcRedundancy 2
+LinkQualityFishEye 1
+MprCoverage 7
+LinkQualityAlgorithm "etx_ff"
+
+Hna4
+{
+                $IP 255.255.255.255
+}
+
+LoadPlugin "olsrd_nameservice.so.0.3"
+{
+        PlParam "name" "$HOSTNAME"
+}
+
+LoadPlugin "olsrd_watchdog.so.0.1"
+{
+}
+
+LoadPlugin "olsrd_txtinfo.so.0.1"
+{
+        PlParam "accept" "0.0.0.0"
+        PlParam "port" "2006"
+}
+
+Interface "$wifidevice"
+{
+        Ip4Broadcast 255.255.255.255
+        Mode "mesh"
+        HelloInterval 4.0
+        HelloValidityTime 150.0
+        TcInterval 3.0
+        TcValidityTime 600.0
+        MidInterval 30.0
+        MidValidityTime 600.0
+        HnaInterval 12.0
+        HnaValidityTime 150.0
+}
+EOF
 }
 
 [ "$DAEMON" = "batman-adv" ] && {
@@ -82,5 +139,9 @@ else
 fi
 
 echo -ne "\nConnected to $SSID \n"
+
+[ "$DAEMON" = 'olsr' ] && {
+	olsrd -f '/etc/olsrd.conf' -nofork
+}
 
 exit 0
