@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# adhoc weimarnetz 2432 10.63.9.1
 # adhoc white 2412 192.168.11.235  <--- static IP channel 1
 # OR
 # adhoc white 2412 dhcp 192.168.5.1 <--- dhcp channel 1 with default gateway of 192.168.5.1 
@@ -40,9 +41,11 @@ dhcp=0
 	dhcp=1
 }
 
-gateway="$4"
-[ -z "$gateway" ] && {
-	gateway=192.168.5.1
+[ "$DAEMON" = "batman-adv" ] && {
+	gateway="$4"
+	[ -z "$gateway" ] && {
+		gateway=192.168.5.1
+	}
 }
 
 echo -ne "\nPreparing devices.... \n" 
@@ -62,11 +65,9 @@ iw "$wifidevice" ibss join "$SSID" "$freq"
 iwconfig "$wifidevice" ap "$BSSID"
 
 if [ "$dhcp" -eq 1 ]; then
+	[ "$DAEMON" = "batman-adv" ] && route add default gw "$gateway" 2>/dev/null
 
-	route add default gw "$gateway" 2>/dev/null
-
-	udhcpc -i "$wifidevice" -q -n
-	if [ $? -ne 0 ]; then
+	udhcpc -i "$wifidevice" -q -n || {
 		echo -e "\nUnable to obtain ip address"
 		echo "Exiting..."
 
@@ -74,7 +75,7 @@ if [ "$dhcp" -eq 1 ]; then
 		ifdown -a
 
 		exit 1		
-	fi
+	}
 	
 else
 	ifconfig "$wifidevice" "$3"  2>/dev/null
