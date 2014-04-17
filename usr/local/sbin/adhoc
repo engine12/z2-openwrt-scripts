@@ -14,7 +14,7 @@ get_wifidev()
 
 wifidevice="$( get_wifidev )"
 
-SSID=$1
+SSID="$1"
 if [ "$SSID" == "" ]; then
 	echo -e "\nSSID not specified"
 	echo "Exiting..."
@@ -22,7 +22,7 @@ if [ "$SSID" == "" ]; then
 	exit 1	
 fi
 
-freq=$2
+freq="$2"
 if [ "$freq" == "" ]; then
 	freq=2437
 fi
@@ -36,7 +36,7 @@ if [ "$3" == "" ]; then
 	dhcp=1
 fi
 
-gateway=$4
+gateway="$4"
 if [ "$gateway" == "" ]; then
 	gateway=192.168.5.1
 fi
@@ -44,36 +44,36 @@ fi
 echo -ne "\nPreparing devices.... \n" 
 rmmod batman-adv 2>/dev/null
 killall wpa_supplicant 2>/dev/null
-ifconfig $wifidevice down 2>/dev/null
-ifconfig bat0 0.0.0.0 2>/dev/null
+ifconfig "$wifidevice" down 2>/dev/null
+ifconfig "bat0" 0.0.0.0 2>/dev/null
 ifdown -a
 
 
 echo -ne "\nSetting up interface $wifidevice \n"
 
 
-ifconfig $wifidevice up 2>/dev/null
-iw $wifidevice set type ibss
-iw $wifidevice ibss join $SSID $freq
+ifconfig "$wifidevice" up 2>/dev/null
+iw "$wifidevice" set type ibss
+iw "$wifidevice" ibss join "$SSID" "$freq"
 
 
-if [ $dhcp -eq 1 ]; then
+if [ "$dhcp" -eq 1 ]; then
 
-	route add default gw $gateway 2>/dev/null
+	route add default gw "$gateway" 2>/dev/null
 
 	udhcpc -i "$wifidevice" -q -n
 	if [ $? -ne 0 ]; then
 		echo -e "\nUnable to obtain ip address"
 		echo "Exiting..."
 
-		ifconfig $wifidevice down 2>/dev/null
+		ifconfig "$wifidevice" down 2>/dev/null
 		ifdown -a
 
 		exit 1		
 	fi
 	
 else
-	ifconfig $wifidevice $3  2>/dev/null
+	ifconfig "$wifidevice" "$3"  2>/dev/null
 fi
 
 echo -ne "\nConnected to $SSID \n"
