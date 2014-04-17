@@ -16,6 +16,7 @@ get_wifidev()
 
 wifidevice="$( get_wifidev )"
 BSSID='02:ca:ff:ee:ba:be'		# hardcoded IBSS-cell-ID / freifunk-default
+DAEMON=					# babel / batman-adv / batman / bmx / o11s / olsr
 
 SSID="$1"
 [ -z "$SSID" ] && {
@@ -45,10 +46,10 @@ gateway="$4"
 }
 
 echo -ne "\nPreparing devices.... \n" 
-rmmod batman-adv 2>/dev/null
+[ "$DAEMON" = "batman-adv" ] && rmmod batman-adv 2>/dev/null
 killall wpa_supplicant 2>/dev/null
 ifconfig "$wifidevice" down 2>/dev/null
-ifconfig "bat0" 0.0.0.0 2>/dev/null
+[ "$DAEMON" = "batman-adv" ] && ifconfig "bat0" 0.0.0.0 2>/dev/null
 ifdown -a
 
 
