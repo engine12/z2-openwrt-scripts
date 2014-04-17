@@ -7,8 +7,6 @@
 # OR
 # adhoc white  <-- defaults to dhcp and channel 6 with gateway 192.168.5.1
 
-set -x
-
 get_wifidev()
 {
 	set -- $( tail -n1 '/proc/net/wireless' )
@@ -78,7 +76,8 @@ LoadPlugin "olsrd_watchdog.so.0.1"
 
 LoadPlugin "olsrd_txtinfo.so.0.1"
 {
-        PlParam "accept" "0.0.0.0"
+	# query via: wget -qO - "http://127.0.0.1:2006"
+	PlParam "accept" "0.0.0.0"
         PlParam "port" "2006"
 }
 
@@ -141,7 +140,8 @@ fi
 echo -ne "\nConnected to $SSID \n"
 
 [ "$DAEMON" = 'olsr' ] && {
-	olsrd -f '/etc/olsrd.conf' -nofork
+	pidof olsrd >/dev/null && killall olsrd
+	olsrd -f '/etc/olsrd.conf' -nofork &
 }
 
 exit 0
