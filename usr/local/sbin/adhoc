@@ -1,75 +1,147 @@
 #!/bin/sh
 
+# adhoc weimarnetz 2432 10.63.9.1
 # adhoc white 2412 192.168.11.235  <--- static IP channel 1
 # OR
 # adhoc white 2412 dhcp 192.168.5.1 <--- dhcp channel 1 with default gateway of 192.168.5.1 
 # OR
 # adhoc white  <-- defaults to dhcp and channel 6 with gateway 192.168.5.1
 
-wifidevice=wlan0
+get_wifidev()
+{
+	set -- $( tail -n1 '/proc/net/wireless' )
+	echo ${1%:*}	# wlan0: -> wlan0
+}
 
-SSID=$1
-if [ "$SSID" == "" ]; then
+wifidevice="$( get_wifidev )"
+BSSID='02:ca:ff:ee:ba:be'		# hardcoded IBSS-cell-ID / freifunk-default
+DAEMON=					# babel / batman-adv / batman / bmx / o11s / olsr
+
+SSID="$1"
+[ -z "$SSID" ] && {
 	echo -e "\nSSID not specified"
 	echo "Exiting..."
 
 	exit 1	
-fi
+}
 
-freq=$2
-if [ "$freq" == "" ]; then
+freq="$2"
+[ -z "$freq" ] && {
 	freq=2437
-fi
+}
 
 dhcp=0
-if [ "$3" == "dhcp" ]; then
+if [ "$3" = 'dhcp' ]; then
 	dhcp=1
+else
+	IP="$3"
 fi
 
-if [ "$3" == "" ]; then
+[ -z "$3" ] && {
 	dhcp=1
-fi
+}
 
-gateway=$4
-if [ "$gateway" == "" ]; then
-	gateway=192.168.5.1
-fi
+[ -e '/etc/config/olsrd' ] && {
+	# normal olsrd-startup file will not work,
+	# because some components on zipit-distro are too old
+	DAEMON='olsr'
+	read HOSTNAME <'/proc/sys/kernel/hostname'
+
+	cat >'/etc/olsrd.conf' <<EOF
+DebugLevel 0
+AllowNoInt yes
+MainIp $IP
+ClearScreen no
+IpVersion 4
+FIBMetric "flat"
+Willingness 7
+TcRedundancy 2
+LinkQualityFishEye 1
+MprCoverage 7
+LinkQualityAlgorithm "etx_ff"
+
+Hna4
+{
+                $IP 255.255.255.255
+}
+
+LoadPlugin "olsrd_nameservice.so.0.3"
+{
+        PlParam "name" "$HOSTNAME"
+}
+
+LoadPlugin "olsrd_watchdog.so.0.1"
+{
+}
+
+LoadPlugin "olsrd_txtinfo.so.0.1"
+{
+	# query via: wget -qO - "http://127.0.0.1:2006"
+	PlParam "accept" "0.0.0.0"
+        PlParam "port" "2006"
+}
+
+Interface "$wifidevice"
+{
+        Ip4Broadcast 255.255.255.255
+        Mode "mesh"
+        HelloInterval 4.0
+        HelloValidityTime 150.0
+        TcInterval 3.0
+        TcValidityTime 600.0
+        MidInterval 30.0
+        MidValidityTime 600.0
+        HnaInterval 12.0
+        HnaValidityTime 150.0
+}
+EOF
+}
+
+[ "$DAEMON" = "batman-adv" ] && {
+	gateway="$4"
+	[ -z "$gateway" ] && {
+		gateway=192.168.5.1
+	}
+}
 
 echo -ne "\nPreparing devices.... \n" 
-rmmod batman-adv 2>/dev/null
+[ "$DAEMON" = "batman-adv" ] && rmmod batman-adv 2>/dev/null
 killall wpa_supplicant 2>/dev/null
-ifconfig $wifidevice down 2>/dev/null
-ifconfig bat0 0.0.0.0 2>/dev/null
+ifconfig "$wifidevice" down 2>/dev/null
+[ "$DAEMON" = "batman-adv" ] && ifconfig "bat0" 0.0.0.0 2>/dev/null
 ifdown -a
 
 
-echo -ne "\nSetting up interface $wifidevice \n"
+echo -ne "\nSetting up interface '$wifidevice' \n"
 
 
-ifconfig $wifidevice up 2>/dev/null
-iw $wifidevice set type ibss
-iw $wifidevice ibss join $SSID $freq
+ifconfig "$wifidevice" up 2>/dev/null
+iw "$wifidevice" set type ibss
+iw "$wifidevice" ibss join "$SSID" "$freq"
+iwconfig "$wifidevice" ap "$BSSID"
 
+if [ "$dhcp" -eq 1 ]; then
+	[ "$DAEMON" = "batman-adv" ] && route add default gw "$gateway" 2>/dev/null
 
-if [ $dhcp -eq 1 ]; then
-
-	route add default gw $gateway 2>/dev/null
-
-	udhcpc -i "$wifidevice" -q -n
-	if [ $? -ne 0 ]; then
+	udhcpc -i "$wifidevice" -q -n || {
 		echo -e "\nUnable to obtain ip address"
 		echo "Exiting..."
 
-		ifconfig $wifidevice down 2>/dev/null
+		ifconfig "$wifidevice" down 2>/dev/null
 		ifdown -a
 
 		exit 1		
-	fi
+	}
 	
 else
-	ifconfig $wifidevice $3  2>/dev/null
+	ifconfig "$wifidevice" "$3"  2>/dev/null
 fi
 
 echo -ne "\nConnected to $SSID \n"
+
+[ "$DAEMON" = 'olsr' ] && {
+	pidof olsrd >/dev/null && killall olsrd
+	olsrd -f '/etc/olsrd.conf' -nofork &
+}
 
 exit 0
